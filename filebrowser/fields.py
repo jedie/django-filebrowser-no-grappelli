@@ -86,6 +86,7 @@ class FileBrowseField(Field):
         self.directory = kwargs.pop('directory', '')
         self.extensions = kwargs.pop('extensions', '')
         self.format = kwargs.pop('format', '')
+        kwargs.setdefault('max_length', 255)
         return super(FileBrowseField, self).__init__(*args, **kwargs)
     
     def to_python(self, value):
@@ -100,7 +101,7 @@ class FileBrowseField(Field):
         
     
     def get_manipulator_field_objs(self):
-        return [oldforms.TextField]
+        return [forms.TextField]
     
     def get_internal_type(self):
         return "CharField"
