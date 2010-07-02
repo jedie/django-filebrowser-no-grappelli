@@ -70,5 +70,6 @@
             {% include "filebrowser/include/filter.html" %}
         </div>
     </div>
+	{% if settings_var.DEBUG %}{% include "filebrowser/include/debug_info.html" %}{% endif %}
 </div>
 {% endblock %}
