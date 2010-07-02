@@ -84,7 +84,13 @@
 
         <!-- RENAME -->
         <td class="fb_icon"><a href="{% url fb_rename %}{% query_string %}&amp;filename={{ file.filename }}" class="fb_renamelink" title="{% trans 'Rename' %}">{% trans 'Rename' %}</a></td>
-        
+		
+		<!-- EDIT -->
+        <td class="fb_icon">
+        	{% ifnotequal file.filetype 'Folder' %}
+        	<a href="{% url fb_edit %}{% query_string %}&amp;filename={{ file.filename }}" class="fb_editlink" title="{% trans 'Edit' %}">{% trans 'Edit' %}</a>
+			{% endifnotequal %}
+		</td>
 
         <!-- DELETE -->
         {% if results_var.delete_total %}
