@@ -1,9 +1,13 @@
 # coding: utf-8
 
 # imports
-import os, re, decimal
 from time import gmtime, strftime, localtime, mktime, time
 from urlparse import urlparse
+import decimal
+import encodings
+import os
+import re
+import sys
 
 # django imports
 from django.core.exceptions import ImproperlyConfigured
@@ -378,5 +382,6 @@ def convert_filename(value):
         return value.replace(" ", "_").lower()
     else:
         return value
+
 
 

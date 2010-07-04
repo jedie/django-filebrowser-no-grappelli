@@ -1,7 +1,14 @@
 # coding: utf-8
 
 # imports
-import re, os
+import encodings
+import os
+import re
+import sys
+
+if __name__ == "__main__":
+    # For doctest only
+    os.environ["DJANGO_SETTINGS_MODULE"] = "django.conf.global_settings"
 
 # django imports
 from django import forms
@@ -11,6 +18,7 @@ from django.utils.translation import ugettext as _
 # filebrowser imports
 from filebrowser.settings import MAX_UPLOAD_SIZE, FOLDER_REGEX
 from filebrowser.functions import convert_filename
+from filebrowser.settings import *
 
 alnum_name_re = re.compile(FOLDER_REGEX)
 
@@ -61,5 +69,62 @@ class RenameForm(forms.Form):
         return convert_filename(self.cleaned_data['name'])
 
 
+
+class CodecChoiceField(forms.ChoiceField):
+    """
+    Select a sub directory in settings.MEDIA_ROOT
+    
+    >>> CodecChoiceField().choices # doctest: +ELLIPSIS
+    [('utf8', 'utf_8'), ('ascii', 'ascii'), ... ('zlib_codec', 'zlib_codec')]
+    """
+    def __init__(self, *args, **kwargs):
+        super(CodecChoiceField, self).__init__(*args, **kwargs)
+
+        assert isinstance(PREFERED_CODECS, (tuple, list)), "FILEBROWSER_PREFERED_CODECS must be a tuple or list"
+        self.prefered_codecs = PREFERED_CODECS
+        self.choices = self._build_choices()
+
+    def _get_codecs(self):
+        return sorted(set(encodings.aliases.aliases.values()))
+
+    def _build_choices(self):
+        choices = []
+        codecs = self._get_codecs()
+        for prefered in self.prefered_codecs:
+            prefered = prefered.replace("-", "")# FIXME
+            if prefered in encodings.aliases.aliases:
+                codec = encodings.aliases.aliases[prefered]
+            elif prefered in codecs:
+                codec = prefered
+            else:
+                if settings.DEBUG:
+                    sys.stderr.write("Ignore unknwon codec %r\n" % prefered)
+                continue
+
+            choices.append((codec, prefered))
+
+        existing_codec = [choice[1] for choice in choices]
+
+        for codec in codecs:
+            if codec not in existing_codec:
+                choices.append((codec, codec))
+
+        return choices
+
+
+
 class EditForm(forms.Form):
     content = forms.CharField(widget=forms.Textarea(), required=False)
+
+class SelectEncodingForm(forms.Form):
+    encoding = CodecChoiceField()
+
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(
+#        verbose=True
+        verbose=False
+    )
+    print "DocTest end."

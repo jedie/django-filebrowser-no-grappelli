@@ -18,6 +18,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.dispatch import Signal
 from django.core.paginator import Paginator, InvalidPage, EmptyPage
 from django.utils.encoding import smart_str
+import codecs
 
 try:
     # django SVN
@@ -32,7 +33,7 @@ from filebrowser.functions import path_to_url, sort_by_attr, get_path, get_file,
 from filebrowser.templatetags.fb_tags import query_helper
 from filebrowser.base import FileObject
 from filebrowser.decorators import flash_login_required
-from filebrowser.forms import EditForm
+from filebrowser.forms import EditForm, CodecChoiceField, SelectEncodingForm
 
 # Precompile regular expressions
 filter_re = []
@@ -459,6 +460,25 @@ def rename(request):
 rename = staff_member_required(never_cache(rename))
 
 
+def _get_editfile_forms(request, abs_filepath, encoding):
+    f = codecs.open(abs_filepath, "r", encoding)
+    try:
+        file_content = f.read()
+    except UnicodeDecodeError, err:
+        msg = _(
+            "Can't open file in default encoding ('%s'),"
+            " please select encoding and reopen."
+            " (Original error was: %s)"
+        ) % (
+                encoding, err
+        )
+        request.user.message_set.create(message=msg)
+        edit_form = None # Don't display
+    else:
+        f.close()
+        edit_form = EditForm(initial={"content":file_content})
+    return edit_form
+
 def edit(request):
     """
     simple edit a file content.
@@ -478,25 +498,40 @@ def edit(request):
     abs_filepath = os.path.join(MEDIA_ROOT, relative_server_path)
 
     if request.method == 'POST':
-        form = EditForm(request.POST)
-        if form.is_valid():
-            new_content = form.cleaned_data["content"]
-            f = file(abs_filepath, "w")
-            f.write(new_content)
-            f.close()
-            msg = _('Editing was successful.')
-            request.user.message_set.create(message=msg)
-            redirect_url = reverse("fb_browse") + query_helper(request.GET, "", "filename")
-            return HttpResponseRedirect(redirect_url)
-    else:
-        f = file(abs_filepath, "r")
-        file_content = f.read()
-        f.close()
+        encoding_form = SelectEncodingForm(request.POST)
+        edit_form = EditForm(request.POST)
+        if "reopen" in request.POST:
+            # Reopen the file with other encoding
+            if encoding_form.is_valid():
+                encoding = encoding_form.cleaned_data["encoding"]
+                edit_form = _get_editfile_forms(request, abs_filepath, encoding)
+                msg = _("File was reopend with '%s' encoding." % encoding)
+                request.user.message_set.create(message=msg)
+        else:
+            if edit_form.is_valid() and encoding_form.is_valid():
+                new_content = edit_form.cleaned_data["content"]
+                encoding = encoding_form.cleaned_data["encoding"]
 
-        form = EditForm(initial={"content":file_content})
+                f = codecs.open(abs_filepath, "w", encoding)
+                f.write(new_content)
+                f.close()
+
+                msg = _(
+                    "Editing was successful."
+                    " (Content was written with '%s' encoding.)"
+                ) % (encoding)
+                request.user.message_set.create(message=msg)
+                redirect_url = reverse("fb_browse") + query_helper(request.GET, "", "filename")
+                return HttpResponseRedirect(redirect_url)
+    else:
+        default_encoding = CodecChoiceField().choices[0][0] #FIXME
+        encoding_form = SelectEncodingForm()
+        edit_form = _get_editfile_forms(request, abs_filepath, default_encoding)
+
 
     return render_to_response('filebrowser/edit.html', {
-        'form': form,
+        'encoding_form': encoding_form,
+        'edit_form': edit_form,
         'query': request.GET,
         'title': _(u'edit "%s"') % filename,
         'settings_var': get_settings_var(),

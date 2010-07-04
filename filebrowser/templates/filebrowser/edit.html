@@ -24,11 +24,19 @@
     <div>
         {% if form.errors %}<p class="errornote">{% trans 'Please correct the following errors.' %}</p>{% endif %}
         <fieldset class="module aligned">
-            {{ form.as_p }}
+	        {{ encoding_form.as_p }}
         </fieldset>
         <div class="submit-row">
-            <input type="submit" value="{% trans 'Submit' %}" class="default" />
+            <input type="submit" value="{% trans 'Reopen' %}" name="reopen" class="default" />
         </div>
+		{% if edit_form %}
+        <fieldset class="module aligned">
+	        {{ edit_form.as_p }}
+        </fieldset>
+        <div class="submit-row">
+            <input type="submit" value="{% trans 'Submit' %}" name="save" class="default" />
+        </div>
+		{% endif %}
     </div>
     </form>
 </div>
