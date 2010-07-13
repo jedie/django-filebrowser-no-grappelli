@@ -87,9 +87,9 @@
 		
 		<!-- EDIT -->
         <td class="fb_icon">
-        	{% ifnotequal file.filetype 'Folder' %}
+        	{% ifequal file.filetype 'Code' %}
         	<a href="{% url fb_edit %}{% query_string %}&amp;filename={{ file.filename }}" class="fb_editlink" title="{% trans 'Edit' %}">{% trans 'Edit' %}</a>
-			{% endifnotequal %}
+			{% endifequal %}
 		</td>
 
         <!-- DELETE -->
